@@ -1,12 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
-function ProductForm() {
+function ProductForm({ product }) {
   const [productName, setProductName] = useState('');
   const [quantity, setQuantity] = useState('');
   const [price, setPrice] = useState('');
   const [discountType, setDiscountType] = useState('');
   const [productThumbnail, setProductThumbnail] = useState(null);
+  const history = useNavigate();
+
+
+  useEffect(() => {
+    // Populate the form fields with the data of the existing product 
+    if (product) {
+      setProductName(product.productName || '');
+      setQuantity(product.quantity || '');
+      setPrice(product.price || '');
+      setDiscountType(product.discountType || '');
+      setProductThumbnail(product.productThumbnail || null);
+    }
+  }, [product]);
 
 
   // Function to send the JWT token in the request headers
@@ -30,21 +44,32 @@ function ProductForm() {
       formData.append('discountType', discountType);
       formData.append('productThumbnail', productThumbnail);
 
-      // API call to create a new product
-      const response = await axios.post('http://localhost:8000/product', formData, {
-        headers: getAuthHeaders(),
-      });
 
-      console.log(response.data);
+      if (product) {
+        // API call to update the product if a product prop is provided
+        const response = await axios.put(`http://localhost:8000/product/${product._id}`, formData, {
+          headers: getAuthHeaders(),
+        });
+        console.log('Product updated:', response.data);
+      } else {
+        // API call to create a new product if no product prop is provided
+        const response = await axios.post('http://localhost:8000/product', formData, {
+          headers: getAuthHeaders(),
+        });
+        console.log('Product added:', response.data);
+      }
+
+      history('/home');
     } catch (error) {
       console.error(error.message);
     }
   };
 
   return (
-    <div className='form'>
-      <h2>Add Product</h2>
-      <form onSubmit={handleSubmit}>
+    <div className='container'>
+
+      <form className='prod-form' onSubmit={handleSubmit}>
+        <h2>{product ? 'Update Product' : 'Add Product'}</h2>
         <div>
           <label>Product Name:</label>
           <input
@@ -91,7 +116,9 @@ function ProductForm() {
             required
           />
         </div>
-        <button type="submit">Add Product</button>
+        <button type="submit">
+          {product ? 'Update Product' : 'Add Product'}
+        </button>
       </form>
     </div>
   );

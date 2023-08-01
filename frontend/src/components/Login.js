@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-import ChangePassword from './ChangePassword';
+import { useNavigate, Link } from 'react-router-dom';
 
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const history = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    localStorage.setItem('username', email);
+    localStorage.setItem('email', email);
     try {
       const response = await axios.post('http://localhost:8000/login', {
         email,
@@ -25,53 +24,58 @@ function Login() {
       // Store the token in localStorage
       localStorage.setItem('token', token);
       // Redirect to the dashboard or home page on successful login
-      history('/products');
+      history('/home');
     } catch (error) {
       console.error(error);
+      if (error.response && error.response.data && error.response.data.message) {
+        setErrorMessage(error.response.data.message);
+      } else {
+        setErrorMessage('An error occurred during login. Please try again.');
+      }
     }
   };
 
-  const handleShowChangePassword = () => {
-    setShowChangePassword(true);
-  };
-
-  const handleLogout = () => {
-    // Remove the authentication token from local storage
-    localStorage.removeItem('token');
-    // Redirect to the login page or any other page after logout
-    history('/login');
-  };
-
   return (
-    <div className='form'>
-      <h1>Login</h1>
-      <form onSubmit={handleSubmit}>
-        <label>Email:</label>
-        <input
-          type="text"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <label>Password:</label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-        <button type="submit">Login</button>
-      </form>
+    <div className='login_container'>
+      <div className='login_form_container'>
+        <div className='left-side'>
+          <form className='form_container' onSubmit={handleSubmit}>
+            <h1>Login</h1>
+            <label>Email:</label>
+            <input
+              type="text"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <label>Password:</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            {errorMessage && <p className="error-message">{errorMessage}</p>}
 
-      <div>
-        <button onClick={handleShowChangePassword}>Change Password</button>
-        <button onClick={handleLogout}>Logout</button>
+            <button className='green_btn' type="submit">Login</button>
+          </form>
+
+          <div>
+            <Link to="/change-pass"> <button className='green_btn'>Change Password</button>   </Link>
+          </div>
+        </div>
+
+        <div className='right-side'>
+          <h1>New Here ?</h1>
+          <Link to="/">
+            <button type="button" className='white_btn'>
+              Sign Up
+            </button>
+          </Link>
+        </div>
       </div>
-
-      {showChangePassword && <ChangePassword />}
     </div>
   );
 }
 
 export default Login;
-

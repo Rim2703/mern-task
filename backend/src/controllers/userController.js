@@ -16,7 +16,7 @@ const transporter = nodemailer.createTransport({
 // Register a new user with email and SMS OTP verification
 const registerApi = async (req, res) => {
   try {
-    const { name, email, phone, dob, profileImage, password } = req.body;
+    const { name, email, phone, dob, password } = req.body;
 
     // Check if the email already exists
     const existingUser = await User.findOne({ email });
@@ -34,6 +34,8 @@ const registerApi = async (req, res) => {
       subject: 'OTP Verification',
       text: `Your OTP for account verification is: ${otp}`,
     });
+
+    const profileImage = req.file ? req.file.path : '';
 
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -55,7 +57,6 @@ const registerApi = async (req, res) => {
     return res.status(500).json({ error: 'Server Error' })
   }
 }
-
 
 
 // User login
@@ -86,24 +87,44 @@ const loginApi = async (req, res) => {
 }
 
 
+//  check if email exists
+const checkEmailExists = async (req, res) => {
+  try {
+    const { email } = req.body;
+    // Check if the user exists
+    const user = await User.findOne({ email })
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' })
+    }
+
+    // Generate a random 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000);
+    console.log(otp)
+    // Send OTP to the provided email using Nodemailer
+    await transporter.sendMail({
+      from: 'khanrimsha976@gmail.com',
+      to: email,
+      subject: 'OTP Verification for Reset Password',
+      text: `Your OTP for password change is: ${otp}`,
+    });
+
+    return res.status(200).json({ message: 'OTP sent successfully' });
+  } catch (error) {
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+
+// Change password api
 const ChangePassword = async (req, res) => {
   try {
-    const { oldPassword, newPassword } = req.body;
+    const { otp, newPassword } = req.body;
 
-    // Retrieve the user's information from the database using the current user's ID or email
-    const userId = req.user.userId;
-    const user = await User.findById(userId);
+    const user = await User.findOne({ otp });
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: 'User not found or invalid OTP' });
     }
-
-    // Verify the old password
-    const passwordMatch = await bcrypt.compare(oldPassword, user.password);
-    if (!passwordMatch) {
-      return res.status(401).json({ error: 'Invalid old password' });
-    }
-
     // Generate a new hash for the new password and update the user's password in the database
     const newHashedPassword = await bcrypt.hash(newPassword, 10);
     user.password = newHashedPassword;
@@ -113,7 +134,8 @@ const ChangePassword = async (req, res) => {
   } catch (error) {
     return res.status(500).json({ error: 'Internal Server Error', message: error.message });
   }
-}
+};
+
 
 const getUser = async (req, res) => {
   try {
@@ -126,4 +148,4 @@ const getUser = async (req, res) => {
 }
 
 
-module.exports = { registerApi, loginApi, getUser, ChangePassword }
+module.exports = { registerApi, loginApi, getUser, ChangePassword, checkEmailExists }
